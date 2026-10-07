@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenAPI 契约演进工作台</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">⇄</span>
+      <div>
+        <h1>OpenAPI 契约演进工作台</h1>
+        <p class="subtitle">基线 → 候选 · 请求不可收窄 · 响应不可放宽</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span id="storage-badge" class="badge badge-muted">存储：检测中…</span>
+      <button id="btn-history" class="btn btn-ghost" type="button">历史分析</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- ===================== upload panel ===================== -->
+    <section id="panel-upload" class="panel">
+      <h2>1. 导入文档包</h2>
+      <p class="hint">
+        支持单个 <code>.yaml/.yml/.json</code> OpenAPI 3.x 文档，或包含多份本地文件的
+        <code>.zip</code> 包（内部与本地跨文件 <code>$ref</code> 会被解析；外部 HTTP 引用不会抓取）。
+      </p>
+      <div class="upload-grid">
+        <div class="upload-card" id="drop-baseline">
+          <h3>基线版本 <small>baseline</small></h3>
+          <input type="file" id="file-baseline" accept=".yaml,.yml,.json,.zip" />
+          <div class="file-meta" id="meta-baseline" hidden></div>
+        </div>
+        <div class="upload-arrow">→</div>
+        <div class="upload-card" id="drop-candidate">
+          <h3>候选版本 <small>candidate</small></h3>
+          <input type="file" id="file-candidate" accept=".yaml,.yml,.json,.zip" />
+          <div class="file-meta" id="meta-candidate" hidden></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btn-analyze" class="btn btn-primary" disabled>开始比对</button>
+        <span id="upload-error" class="error-text"></span>
+      </div>
+    </section>
+
+    <!-- ===================== result panel ===================== -->
+    <section id="panel-result" class="panel" hidden>
+      <div class="result-head">
+        <h2>2. 比对结果 <small id="analysis-id"></small></h2>
+        <div class="export-group">
+          <label class="export-label">确定性导出 JSON：</label>
+          <button class="btn btn-ghost btn-sm" data-export="all">全部</button>
+          <button class="btn btn-ghost btn-sm" data-export="breaking">仅破坏性</button>
+          <button class="btn btn-ghost btn-sm" data-export="undetermined">仅无法判定</button>
+          <button class="btn btn-ghost btn-sm" data-export="compatible">仅兼容</button>
+          <span class="fp" id="fingerprint" title="导出内容的 SHA-256 指纹"></span>
+        </div>
+      </div>
+
+      <div class="summary-cards">
+        <div class="stat stat-breaking" id="stat-breaking">
+          <span class="stat-num">0</span><span class="stat-label">破坏性</span>
+        </div>
+        <div class="stat stat-undetermined" id="stat-undetermined">
+          <span class="stat-num">0</span><span class="stat-label">无法判定</span>
+        </div>
+        <div class="stat stat-compatible" id="stat-compatible">
+          <span class="stat-num">0</span><span class="stat-label">兼容</span>
+        </div>
+        <div class="stat stat-eng" id="stat-engine">
+          <span class="stat-num">0</span><span class="stat-label">循环终止</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="filters" role="group" aria-label="按严重度筛选">
+          <label><input type="checkbox" value="breaking" checked /> 破坏性</label>
+          <label><input type="checkbox" value="undetermined" checked /> 无法判定</label>
+          <label><input type="checkbox" value="compatible" /> 兼容</label>
+          <input type="text" id="filter-text" placeholder="按路径 / 规则 / 消息过滤…" />
+        </div>
+        <div class="view-toggle">
+          <button class="btn btn-sm tab active" data-view="endpoints">按端点</button>
+          <button class="btn btn-sm tab" data-view="findings">扁平列表</button>
+          <button class="btn btn-sm tab" data-view="release">发布放行</button>
+          <button class="btn btn-sm tab" data-view="coverage">调用覆盖</button>
+          <button class="btn btn-sm tab" data-view="migration">请求迁移</button>
+        </div>
+      </div>
+
+      <div id="list-endpoints" class="endpoint-list"></div>
+      <div id="list-findings" class="finding-table" hidden></div>
+      <div id="list-release" class="release-view" hidden></div>
+
+      <!-- ===================== call coverage view ===================== -->
+      <div id="list-coverage" class="coverage-view" hidden>
+        <div class="coverage-toolbar">
+          <div class="coverage-sides" role="group" aria-label="选择文档侧">
+            <button class="btn btn-sm cov-side active" data-side="baseline">基线 baseline</button>
+            <button class="btn btn-sm cov-side" data-side="candidate">候选 candidate</button>
+          </div>
+          <div class="coverage-upload">
+            <input type="file" id="coverage-file" accept=".ndjson,.jsonl,.json,.txt" />
+            <button id="btn-coverage-upload" class="btn btn-primary btn-sm" disabled>上传 NDJSON 计算覆盖</button>
+            <button id="btn-coverage-export" class="btn btn-ghost btn-sm" hidden>⬇ 导出覆盖 JSON</button>
+            <button id="btn-gap-samples" class="btn btn-ghost btn-sm" hidden>⬇ 下载缺口补测样本 NDJSON</button>
+            <button id="btn-coverage-delete" class="btn btn-ghost btn-sm" hidden>删除</button>
+            <span id="coverage-error" class="error-text"></span>
+          </div>
+        </div>
+        <p class="hint" style="margin:8px 0 14px">
+          每行一个调用对象：<code>method</code>、<code>path</code>、<code>query</code>、
+          <code>headers</code>、<code>cookies</code>，<code>request</code>/<code>response</code>
+          含 <code>media_type</code> 与 JSON <code>body</code>（缺省 <code>body</code> 表示无实体），
+          <code>response</code> 含整数 <code>status</code>。路径先精确后唯一模板；
+          覆盖格 = 响应状态码 × JSON 媒体类型（无 content 单列），仅在请求参数 / 请求体 /
+          响应体可判定约束均通过时计入覆盖。已保存覆盖后可一键生成「覆盖缺口补测样本」：
+          为每个未覆盖格下载符合本行格式、重新上传即可补上该格的 NDJSON；
+          精确码抢占范围、范围抢占 default、模板路径被抢占或必填值无法可靠构造时逐格说明原因。
+        </p>
+        <div id="coverage-gap-samples"></div>
+        <div id="coverage-body"></div>
+      </div>
+
+      <!-- ===================== request migration view ===================== -->
+      <div id="list-migration" class="migration-view" hidden>
+        <div class="coverage-toolbar">
+          <div class="coverage-upload">
+            <input type="file" id="migration-file" accept=".ndjson,.jsonl,.json,.txt" />
+            <button id="btn-migration-upload" class="btn btn-primary btn-sm" disabled>上传 NDJSON 评估迁移</button>
+            <button id="btn-migration-export" class="btn btn-ghost btn-sm" hidden>⬇ 导出迁移 JSON</button>
+            <button id="btn-migration-delete" class="btn btn-ghost btn-sm" hidden>删除</button>
+            <span id="migration-error" class="error-text"></span>
+          </div>
+        </div>
+        <p class="hint" style="margin:8px 0 14px">
+          上传<b>基线时期</b>的 NDJSON 请求记录：每行含 <code>method</code>、<code>path</code>、
+          <code>query</code>、<code>headers</code>、<code>cookies</code> 及可选
+          <code>request.media_type</code> / <code>request.body</code>；兼容旧调用行
+          （含 <code>response</code>），但响应内容会被忽略。同一具体路径在基线与候选
+          两侧<b>分别</b>匹配端点并绑定参数（模板变量改名不会复用基线绑定），逐行给出
+          两侧「通过 / 失败 / 待定」原因：仅基线确定通过且候选确定失败记
+          <b>受影响</b>，双侧确定通过记<b>未受影响</b>，基线确定失败记<b>不适用</b>，
+          其余（任一侧待定）记<b>待核</b>。
+        </p>
+        <div id="migration-body"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== finding drawer ===================== -->
+  <aside id="drawer" class="drawer" hidden>
+    <div class="drawer-head">
+      <h3 id="drawer-title">结果详情</h3>
+      <button id="drawer-close" class="btn btn-ghost btn-sm">关闭 ✕</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </aside>
+  <div id="drawer-backdrop" class="backdrop" hidden></div>
+
+  <!-- ===================== history modal ===================== -->
+  <div id="modal-history" class="modal" hidden>
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>历史分析</h3>
+        <button id="history-close" class="btn btn-ghost btn-sm">关闭 ✕</button>
+      </div>
+      <div id="history-list" class="history-list"></div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

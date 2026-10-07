@@ -1,0 +1,10 @@
+Timestamped:
+  type: object
+  required: [createdAt]
+  properties:
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: timestamp              # format 变化（date-time → 自定义）→ 无法判定

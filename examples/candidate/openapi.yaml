@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: Pet Store 示例 API（候选）
+  version: 2.0.0
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      parameters:
+        - name: status
+          in: query
+          required: true            # 可选 → 必填（请求收窄，破坏性）
+          schema:
+            type: string
+            enum: [available, sold]  # 枚举收窄（删除 pending）
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50              # 上界压低（请求收窄）
+        - name: trace                # 新增可选参数（兼容）
+          in: header
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: 宠物列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "models/pet.yaml#/Pet"
+    post:
+      operationId: createPet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "models/pet.yaml#/NewPet"
+      responses:
+        "201":
+          description: 已创建
+          content:
+            application/json:
+              schema:
+                $ref: "models/pet.yaml#/Pet"
+        # 400 响应被删除（破坏性）
+  /pets/{petId}:
+    get:
+      operationId: getPet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: "models/pet.yaml#/Pet"
+        "404":
+          description: 不存在
+  /pets/search:                          # 新增端点（兼容）
+    get:
+      operationId: searchPets
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "models/pet.yaml#/Pet"
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 客户
+          content:
+            application/json:
+              schema:
+                $ref: "models/customer.yaml#/Customer"
+  # /legacy/echo 端点被删除（破坏性）
+  /legacy/decide:
+    post:
+      operationId: legacyDecide
+      summary: 请求体由 oneOf(object|object+not) 收窄为仅 string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string              # 旧的 object 形态（如 {}）被拒绝
+      responses:
+        "200":
+          description: 已接受
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: boolean

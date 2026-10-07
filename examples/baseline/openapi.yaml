@@ -1,0 +1,125 @@
+openapi: 3.0.3
+info:
+  title: Pet Store 示例 API（基线）
+  version: 1.4.0
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [available, pending, sold]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: 宠物列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "models/pet.yaml#/Pet"
+    post:
+      operationId: createPet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "models/pet.yaml#/NewPet"
+      responses:
+        "201":
+          description: 已创建
+          content:
+            application/json:
+              schema:
+                $ref: "models/pet.yaml#/Pet"
+        "400":
+          description: 参数错误
+  /pets/{petId}:
+    get:
+      operationId: getPet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: "models/pet.yaml#/Pet"
+        "404":
+          description: 不存在
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 客户
+          content:
+            application/json:
+              schema:
+                $ref: "models/customer.yaml#/Customer"
+  /legacy/echo:
+    post:
+      operationId: legacyEcho
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "models/common.yaml#/EchoPayload"
+      responses:
+        "200":
+          description: 原样返回
+          content:
+            application/json:
+              schema:
+                $ref: "models/common.yaml#/EchoPayload"
+  /legacy/decide:
+    post:
+      operationId: legacyDecide
+      summary: 请求体为 oneOf，其中一支含未支持的 not
+      description: |
+        基线请求体是 oneOf：一支为普通 object（空对象 {} 即可确定通过），
+        另一支带未支持的 `not` 关键字（{} 能否通过该支无法判定）。
+        候选把请求体收窄为仅接受 string。旧客户端发送的 `{}` 在基线侧
+        属于「一过一待定」，oneOf 是否恰好一支通过无法定论——反例自检与
+        重放必须标记为待定，而不得宣称“基线通过、候选失败”的已验证
+        单侧通过。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                - type: object
+                  not:
+                    type: string
+      responses:
+        "200":
+          description: 已接受
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: boolean

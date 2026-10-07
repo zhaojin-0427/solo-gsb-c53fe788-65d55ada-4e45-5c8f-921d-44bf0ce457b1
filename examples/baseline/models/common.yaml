@@ -1,0 +1,19 @@
+Timestamped:
+  type: object
+  required: [createdAt]
+  properties:
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time
+
+EchoPayload:
+  type: object
+  required: [message]
+  properties:
+    message:
+      type: string
+    n:
+      type: integer

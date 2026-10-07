@@ -1,0 +1,110 @@
+Pet:
+  type: object
+  required: [id, name, status, internalCode]   # 新增必填 internalCode（响应增强 / 若用于请求则破坏）
+  properties:
+    id:
+      type: integer
+      format: int64
+    name:
+      type: string
+      minLength: 2                              # minLength 1 → 2（请求侧若复用会收窄）
+      maxLength: 50
+    status:
+      type: string
+      enum: [available, pending, sold, adopted] # 响应枚举放宽（新增 adopted）
+    nickname:
+      type: string
+      nullable: false                           # nullable true → false
+    tags:
+      type: array
+      items:
+        $ref: "#/Tag"
+      maxItems: 20
+    category:
+      allOf:
+        - $ref: "#/Category"
+    owner:
+      $ref: "customer.yaml#/Customer"
+    parent:
+      $ref: "#/Pet"                             # 循环引用（构建必须终止）
+    kind:
+      oneOf:
+        - $ref: "#/Dog"
+        - $ref: "#/Cat"
+        - $ref: "#/Bird"                        # 新增 oneOf 分支（响应放宽）
+    photo_urls:
+      type: array
+      items: { type: string }
+    internalCode:
+      type: string
+
+Tag:
+  type: object
+  required: [name]
+  properties:
+    name: { type: string }
+    color: { type: string, nullable: true }
+
+Category:
+  type: object
+  required: [id, name]
+  properties:
+    id: { type: integer }
+    name: { type: string }
+
+Dog:
+  allOf:
+    - $ref: "#/Named"
+    - type: object
+      required: [breed]
+      properties:
+        breed: { type: string }
+
+Cat:
+  allOf:
+    - $ref: "#/Named"
+    - type: object
+      required: [indoor]
+      properties:
+        indoor: { type: boolean }
+
+Bird:
+  allOf:
+    - $ref: "#/Named"
+    - type: object
+      required: [wingspan]
+      properties:
+        wingspan: { type: number }
+
+Named:
+  type: object
+  required: [name]
+  properties:
+    name: { type: string }
+
+NewPet:
+  type: object
+  required: [name, kind]                        # 新增必填 kind（请求收窄，破坏性）
+  properties:
+    name:
+      type: string
+      minLength: 2                              # minLength 1 → 2（请求收窄）
+      maxLength: 50
+    nickname:
+      type: string
+      pattern: "^[A-Za-z ]+$"                  # pattern 不被规则引擎支持 → 无法判定
+    tags:
+      type: array
+      items:
+        $ref: "#/Tag"
+      maxItems: 10                              # 20 → 10（请求收窄）
+    category:
+      $ref: "#/Category"
+    kind:
+      oneOf:
+        - $ref: "#/Dog"
+        - $ref: "#/Cat"
+        - $ref: "#/Bird"
+    photo_urls:
+      type: array
+      items: { type: string }

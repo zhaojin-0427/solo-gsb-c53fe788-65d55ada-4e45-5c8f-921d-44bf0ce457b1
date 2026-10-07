@@ -1,0 +1,32 @@
+Customer:
+  type: object
+  required: [id, displayName]
+  properties:
+    id:
+      type: string
+    displayName:
+      type: string
+      maxLength: 100
+    billing:
+      allOf:
+        - $ref: "#/BillingAddress"
+        - $ref: "common.yaml#/Timestamped"
+    friends:
+      type: array
+      items:
+        $ref: "#/Customer"                    # 自引用循环
+    tier:
+      type: string
+      enum: [bronze, silver, gold, platinum]  # 响应枚举放宽
+    score:
+      type: number
+      minimum: 0
+      maximum: 1000                            # 上界放宽（响应破坏）
+
+BillingAddress:
+  type: object
+  required: [country, city]
+  properties:
+    country: { type: string }
+    city: { type: string }
+    line: { type: string }

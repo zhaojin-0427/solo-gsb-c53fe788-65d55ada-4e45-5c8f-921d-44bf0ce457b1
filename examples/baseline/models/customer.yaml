@@ -1,0 +1,32 @@
+Customer:
+  type: object
+  required: [id, displayName]
+  properties:
+    id:
+      type: string
+    displayName:
+      type: string
+      maxLength: 100
+    billing:
+      allOf:
+        - $ref: "#/BillingAddress"
+        - $ref: "common.yaml#/Timestamped"
+    friends:
+      type: array
+      items:
+        $ref: "#/Customer"
+    tier:
+      type: string
+      enum: [bronze, silver, gold]
+    score:
+      type: number
+      minimum: 0
+      maximum: 100
+
+BillingAddress:
+  type: object
+  required: [country, city]
+  properties:
+    country: { type: string }
+    city: { type: string }
+    line: { type: string }

@@ -1,0 +1,14 @@
+{"method":"GET","path":"/pets","query":{"status":"available","limit":"10"},"headers":{},"cookies":{},"request":{}}
+{"method":"GET","path":"/pets","request":{}}
+{"method":"GET","path":"/pets","query":{"status":"pending"},"request":{}}
+{"method":"GET","path":"/pets","query":{"status":"available","limit":"80"},"request":{}}
+{"method":"GET","path":"/pets","query":{"status":"BOGUS"},"request":{}}
+{"method":"GET","path":"/pets/7","request":{}}
+{"method":"GET","path":"/customers/c-100","request":{}}
+{"method":"POST","path":"/pets","headers":{"Content-Type":"application/json"},"request":{"media_type":"application/json","body":{"name":"Luna","kind":{"name":"Luna","breed":"pug"}}}}
+{"method":"POST","path":"/pets","request":{"media_type":"application/json","body":{"name":"Luna"}}}
+{"method":"POST","path":"/pets","request":{"media_type":"application/json","body":{"name":"Luna","kind":{"name":"Luna","breed":"pug"},"nickname":"Lulu"}}}
+{"method":"POST","path":"/legacy/echo","request":{"media_type":"application/json","body":{"message":"hi"}},"response":{"status":200,"media_type":"application/json","body":{"message":"hi"}}}
+{"method":"POST","path":"/legacy/decide","request":{"media_type":"application/json","body":{}}}
+{"method":"GET","path":"/unknown/path","request":{}}
+{"method":"POST","path":"/pets","request":{}}
